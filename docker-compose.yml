@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  apache:
+    image: httpd:latest
+    restart: unless-stopped
+    ports:
+     - "8001:80"
+     - "443:443"
+    volumes:
+     - ./:/usr/local/apache2/htdocs/
+     - ./docker/webserver/httpd-conf:/etc/httpd/conf.d
+    depends_on:
+      - wordpress
+    networks:
+      - app-network
+
+  db.local:
+    image: mysql:latest
+    restart: unless-stopped
+    volumes:
+      - ./docker/database:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: adminadmin
+      MYSQL_DATABASE: liam_home
+    networks:
+      - app-network
+
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db.local:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: adminadmin
+    working_dir: /var/www/html
+    volumes:
+      - ./wordpress:/var/www/html
+    depends_on:
+      - db.local
+    networks:
+      - app-network
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - wordpress
+    networks:
+      - app-network
+
+  ungit:
+    image: miebach/ungit
+    restart: always
+    ports:
+      - "8448:8448"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - wordpress
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
